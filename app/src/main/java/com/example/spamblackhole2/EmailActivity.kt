@@ -2,6 +2,8 @@ package com.example.spamblackhole2
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Base64
 import android.util.Log
 import android.view.MenuItem
@@ -95,16 +97,13 @@ class EmailActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
 
                 if(!isLoading && (visibleItemCount + pasVisibleItems) >= totalItemCount){
                     isLoading = true
+                    mAdapter.addLoadingFooter()
                     account?.let{
-                        fetchEmails(it)
+                      fetchEmails(it)
                     }
                 }
             }
         })
-    }
-
-    private fun showHamEmails() {
-        mAdapter.updateEmails(mHamList)
     }
 
     private fun fetchEmails(account: GoogleSignInAccount) {
@@ -134,7 +133,9 @@ class EmailActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
                 nextPageToken = messagesResponse.nextPageToken
                 val messages: List<Message> = messagesResponse.messages ?: emptyList()
 
-                val newEmails = ArrayList<EmailData>()
+                val newEmails = mutableListOf<EmailData>()
+                val newHamEmails = mutableListOf<EmailData>()
+                val newSpamEmails = mutableListOf<EmailData>()
                 for(message in messages){
                     val msg = gmailService
                         .users()
@@ -149,21 +150,35 @@ class EmailActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
                     val body = getBodyFromMessage(msg)
                     val emailData = EmailData(message.id, subject, snippet)
 
-                    mEmailList.add(emailData)
                     newEmails.add(emailData)
                     if(spamClassifier.classify(body) == "Spam"){
+                        Log.d("SPAM", subject)
+                        newSpamEmails.add(emailData)
                         mSpamList.add(emailData)
                     } else {
+                        newHamEmails.add(emailData)
                         mHamList.add(emailData)
                     }
                 }
+
+                mEmailList.addAll(newEmails)
+
                 withContext(Dispatchers.Main){
-                    mAdapter.notifyDataSetChanged()
+                    mAdapter.removeLoadingFooter()
+                    Handler(Looper.getMainLooper()).post{
+                        if(binding.navigationView.checkedItem?.itemId == R.id.nav_spam)
+                            mAdapter.addEmails(newSpamEmails)
+                        else if(binding.navigationView.checkedItem?.itemId == R.id.nav_ham)
+                            mAdapter.addEmails(newHamEmails)
+                        else
+                            mAdapter.addEmails(newEmails)
+                    }
                     isLoading = false
                 }
             } catch (e:Exception){
                 Log.e("EmailActivity", "Error fetching emails", e)
                 withContext(Dispatchers.Main){
+                    mAdapter.removeLoadingFooter()
                     isLoading = false
                 }
             }
@@ -204,12 +219,13 @@ class EmailActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
         when (item.itemId) {
             R.id.nav_all_emails -> {
                 mAdapter.updateEmails(mEmailList)
+                mAdapter.notifyDataSetChanged()
             }
             R.id.nav_ham -> {
-                mAdapter.updateEmails(mHamList)
+                showHamEmails()
             }
             R.id.nav_spam -> {
-                mAdapter.updateEmails(mSpamList)
+                showSpamEmails()
             }
             R.id.nav_logout -> {
                 signOut()
@@ -219,19 +235,27 @@ class EmailActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelect
         return true
     }
 
-    private fun signOut() {
-        googleSignInClient.signOut().addOnCompleteListener(this){
-            val intent = Intent(this, MainActivity::class.java)
-            startActivity(intent)
-            finish()
-        }
-    }
-
     override fun onBackPressed() {
         if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
             drawerLayout.closeDrawer(GravityCompat.START)
         } else {
             super.onBackPressed()
+        }
+    }
+    private fun showHamEmails() {
+        mAdapter.updateEmails(mHamList)
+        //mAdapter.notifyDataSetChanged()
+    }
+    private fun showSpamEmails() {
+        mAdapter.updateEmails(mSpamList)
+        //mAdapter.notifyDataSetChanged()
+    }
+
+    private fun signOut() {
+        googleSignInClient.signOut().addOnCompleteListener(this){
+            val intent = Intent(this, MainActivity::class.java)
+            startActivity(intent)
+            finish()
         }
     }
 }

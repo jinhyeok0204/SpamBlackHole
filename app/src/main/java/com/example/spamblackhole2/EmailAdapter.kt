@@ -8,7 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.spamblackhole2.databinding.EmailItemBinding
 import com.example.spamblackhole2.databinding.LoadingItemBinding
 
-class EmailAdapter(private var emailList: List<EmailData>, private val onEmailClicked: (EmailData) -> Unit) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+class EmailAdapter(private var emailList: MutableList<EmailData>, private val onEmailClicked: (EmailData) -> Unit) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
         private const val VIEW_TYPE_ITEM = 0
@@ -28,7 +28,7 @@ class EmailAdapter(private var emailList: List<EmailData>, private val onEmailCl
         }
     }
 
-    inner class LoadingViewHolder(val binding: LoadingItemBinding) : RecyclerView.ViewHolder(binding.root)
+    inner class LoadingViewHolder(binding: LoadingItemBinding) : RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         return if(viewType == VIEW_TYPE_ITEM){
@@ -39,7 +39,6 @@ class EmailAdapter(private var emailList: List<EmailData>, private val onEmailCl
             LoadingViewHolder(binding)
         }
     }
-
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         if(holder is EmailViewHolder){
@@ -57,7 +56,7 @@ class EmailAdapter(private var emailList: List<EmailData>, private val onEmailCl
 
     fun addLoadingFooter(){
         isLoadingAdded = true
-        emailList = emailList + EmailData("", "Loading", "")
+        emailList.add(EmailData("", "Loading", ""))
         notifyItemInserted(emailList.size - 1)
     }
 
@@ -66,14 +65,20 @@ class EmailAdapter(private var emailList: List<EmailData>, private val onEmailCl
             isLoadingAdded = false
             val position = emailList.size - 1
             if(position >= 0) {
-                emailList = emailList.dropLast(1)
+                emailList.removeAt(position)
                 notifyItemRemoved(position)
             }
         }
     }
 
     fun updateEmails(newEmailList: List<EmailData>){
-        emailList = newEmailList
+        emailList = newEmailList.toMutableList()
         notifyDataSetChanged()
+    }
+
+    fun addEmails(newEmailList: List<EmailData>){
+        val startPosition = emailList.size
+        emailList.addAll(newEmailList)
+        notifyItemRangeInserted(startPosition, newEmailList.size)
     }
 }
