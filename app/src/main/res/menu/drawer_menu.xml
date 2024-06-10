@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_spam"
+        android:title="스팸함" />
+    <item
+        android:id="@+id/nav_ham"
+        android:title="받은편지함" />
+    <item
+        android:id="@+id/nav_all_emails"
+        android:title="전체보관함" />
+    <item
+        android:id="@+id/nav_logout"
+        android:title="로그아웃"
+        android:icon="@drawable/logout" />
+</menu>
